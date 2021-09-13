@@ -165,6 +165,7 @@ def make_db():
 READFIRSTMTS: bool = False
 READFIRSTMEGAFON: bool = False
 READFIRSTMTS210813: bool = False
+READFIRSTMTS210910: bool = False
 
 def mts_site_to_db(excel_filename: str, sheet: str, db_filename: str, columns_to_readwrite: list,
                    date: str = '2021-06-15'):
@@ -227,6 +228,44 @@ def mts_site_charge_report_electric_energy_meters_15_06_2021_to_csv():
     csv_file.close()
 
 
+def mts_site_now_minus_previous_to_csv(now: str = "2021-09-10", previous_date: str = "2021-08-13",
+                                       db_filename: str = "simdatabase.db", start_count: int =10000):
+    conn = sqlite3.connect(db_filename)
+    type = "Модем"
+    t_auxiliary: str = "Счетчик"
+    addr = "г. Брянск, пр-т Станке Димтрова, 5в, АСКУЭ"
+    snum = ""
+    num = ""
+    cwd = os.getcwd()
+    #print(cwd)
+    os.chdir("C:/Users/shamin.a/PycharmProjects/simcard")
+    file = f"sim-mts_site_now_{now.replace('-', '')}_minus_previous_{previous_date.replace('-', '')}.csv"
+    cursor = conn.cursor()
+    sql = f"""select distinct(num_tel) from mts_operator where num_tel IN
+(select num_tel from mts_operator where date = "{now}"
+except
+select num_tel from mts_operator where date = "{previous_date}");"""
+    print(sql)
+    cursor.execute(sql)
+    data = cursor.fetchall()
+    print(data)
+    conn.commit()
+    cursor.close()
+    conn.close()
+    with open(file, "w", newline='', encoding='utf-8') as csv_file:
+        writer = csv.writer(csv_file, delimiter=';')
+        writer.writerow(['Наименование устройства',
+                         'Идентификационный номер',
+                         'Тип устройства',
+                         'Номер телефона',
+                         'Адрес, где находится устройство'])
+        for i, t_num in enumerate(data):
+            num = str(t_num[0])[1:]
+            auxiliary = f"{t_auxiliary}_{start_count + i}"
+            row = [auxiliary, snum, type, num, addr]
+            print(row)
+            writer.writerow(row)
+
 def mts_site210813_minus_current210615_to_csv():
     conn = sqlite3.connect("simdatabase.db")
     type = "Прочее"
@@ -235,7 +274,7 @@ def mts_site210813_minus_current210615_to_csv():
     snum = ""
     num = ""
     cwd = os.getcwd()
-    #print(cwd)
+    # print(cwd)
     os.chdir("C:/Users/shamin.a/PycharmProjects/simcard")
     file = 'sim-mts_site210813_minus_current210615.csv'
     cursor = conn.cursor()
@@ -250,18 +289,18 @@ select num_tel from mts_current where date = '2021-06-15');  """
     cursor.close()
     conn.close()
     with open(file, "w", newline='', encoding='utf-8') as csv_file:
-        writer = csv.writer(csv_file, delimiter=';')
-        writer.writerow(['Наименование устройства',
-                         'Идентификационный номер',
+         writer = csv.writer(csv_file, delimiter=';')
+         writer.writerow(['Наименование устройства',
+                          'Идентификационный номер',
                          'Тип устройства',
                          'Номер телефона',
                          'Адрес, где находится устройство'])
-        for i, t_num in enumerate(data):
-            num = str(t_num[0])[1:]
-            auxiliary = f"{t_auxiliary} {i}"
-            row = [auxiliary, snum, type, num, addr]
-            print(row)
-            writer.writerow(row)
+         for i, t_num in enumerate(data):
+               num = str(t_num[0])[1:]
+               auxiliary = f"{t_auxiliary} {i}"
+               row = [auxiliary, snum, type, num, addr]
+               print(row)
+               writer.writerow(row)
 
 def mts_on_piramida_server_to_csv_db(excel_filename: str = "", db_filename: str = "", db_table:str = "",
                                      columns_to_readwrite: list = ["", ]):
@@ -678,9 +717,12 @@ if __name__ == '__main__':
     if READFIRSTMEGAFON:
         MEGAFONFIRST: str = 'mobileSubscribers_20210723_140421_15_06_2021.xlsx'
         megafon_site(MEGAFONFIRST, 'simdatabase.db', [7, ])
+    if READFIRSTMTS210910:
+        mts_site_to_db("charge_report_electric_energy_meters_10_09_2021.xlsx", "Charges", "simdatabase.db", [6, ], '2021-09-10')
     #megafon_to_csv()
     #tele2_site_to_csv_db("sim-tele2_15_06_2021.csv", "simdatabase.db", "tele2_current")
     #mts_site210813_minus_current210615_to_csv()
-    mts_site_charge_report_electric_energy_meters_15_06_2021_to_csv()
+    #mts_site_charge_report_electric_energy_meters_15_06_2021_to_csv()
+    mts_site_now_minus_previous_to_csv()
 
 
