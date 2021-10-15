@@ -1,6 +1,7 @@
 import csv
 import os
 import sqlite3
+from icecream import ic
 
 from openpyxl import load_workbook
 
@@ -166,9 +167,10 @@ READFIRSTMTS: bool = False
 READFIRSTMEGAFON: bool = False
 READFIRSTMTS210813: bool = False
 READFIRSTMTS210910: bool = False
+READFIRSTMTS211013: bool = False
 
-def mts_site_to_db(excel_filename: str, sheet: str, db_filename: str, columns_to_readwrite: list,
-                   date: str = '2021-06-15'):
+def mts_site_to_db(excel_filename:str, sheet: str, db_filename: str, columns_to_readwrite: list,
+                   date: str = '2021-06-15', log: bool = True):
     wb = load_workbook(excel_filename)
     #print(wb.sheetnames)
     sheet = wb['Charges']
@@ -188,10 +190,12 @@ def mts_site_to_db(excel_filename: str, sheet: str, db_filename: str, columns_to
             conn = sqlite3.connect(db_filename)
             cursor = conn.cursor()
             sql = f"""INSERT INTO mts_operator(num_tel, account, date) VALUES ({row[1]}, {row[4]}, "{row[2]}")"""
-            #print(sql)
-            cursor.execute(sql)
-            #print(row)
-            conn.commit()
+            if log:
+                ic(sql)
+                ic(row)
+            else:
+                cursor.execute(sql)
+                conn.commit()
     cursor.close()
     conn.close()
 
@@ -261,9 +265,10 @@ select num_tel from mts_operator where date = "{previous_date}");"""
                          'Адрес, где находится устройство'])
         for i, t_num in enumerate(data):
             num = str(t_num[0])[1:]
-            auxiliary = f"{t_auxiliary}_{start_count + i}"
+            snum = start_count + i
+            auxiliary = f"{t_auxiliary}_{snum}"
             row = [auxiliary, snum, type, num, addr]
-            print(row)
+            ic(row)
             writer.writerow(row)
 
 def mts_site210813_minus_current210615_to_csv():
@@ -292,9 +297,9 @@ select num_tel from mts_current where date = '2021-06-15');  """
          writer = csv.writer(csv_file, delimiter=';')
          writer.writerow(['Наименование устройства',
                           'Идентификационный номер',
-                         'Тип устройства',
-                         'Номер телефона',
-                         'Адрес, где находится устройство'])
+                          'Тип устройства',
+                          'Номер телефона',
+                          'Адрес, где находится устройство'])
          for i, t_num in enumerate(data):
                num = str(t_num[0])[1:]
                auxiliary = f"{t_auxiliary} {i}"
@@ -718,11 +723,19 @@ if __name__ == '__main__':
         MEGAFONFIRST: str = 'mobileSubscribers_20210723_140421_15_06_2021.xlsx'
         megafon_site(MEGAFONFIRST, 'simdatabase.db', [7, ])
     if READFIRSTMTS210910:
-        mts_site_to_db("charge_report_electric_energy_meters_10_09_2021.xlsx", "Charges", "simdatabase.db", [6, ], '2021-09-10')
+        mts_site_to_db("charge_report_electric_energy_meters_10_09_2021.xlsx", "Charges",
+                       "simdatabase.db", [6, ], '2021-09-10')
     #megafon_to_csv()
     #tele2_site_to_csv_db("sim-tele2_15_06_2021.csv", "simdatabase.db", "tele2_current")
     #mts_site210813_minus_current210615_to_csv()
     #mts_site_charge_report_electric_energy_meters_15_06_2021_to_csv()
-    mts_site_now_minus_previous_to_csv()
+    #mts_site_now_minus_previous_to_csv()
+    if READFIRSTMTS210910:
+        mts_site_to_db("charge_report_electric_energy_meters_10_09_2021.xlsx", "Charges",
+                       "simdatabase.db", [6, ], '2021-09-10')
+    if READFIRSTMTS211013:
+        mts_site_to_db("charge_report_electric_energy_meters_13_10_2021.xlsx", "Charges",
+                       "simdatabase.db", [6, ], '2021-10-13', log = True)
 
-
+    mts_site_now_minus_previous_to_csv(now='2021-10-13', previous_date='2021-09-10',
+                                       db_filename = "simdatabase.db", start_count =10201)
