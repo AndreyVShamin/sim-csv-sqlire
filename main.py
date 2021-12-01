@@ -168,6 +168,7 @@ READFIRSTMEGAFON: bool = False
 READFIRSTMTS210813: bool = False
 READFIRSTMTS210910: bool = False
 READFIRSTMTS211013: bool = False
+READFIRSTMTS211027: bool = False
 
 def mts_site_to_db(excel_filename:str, sheet: str, db_filename: str, columns_to_readwrite: list,
                    date: str = '2021-06-15', log: bool = True):
@@ -351,6 +352,59 @@ def mts_on_piramida_server_to_csv_db(excel_filename: str = "", db_filename: str 
                 conn.commit()
     cursor.close()
     conn.close()
+
+def mts_on_piramida_server_to_db(now: str = "2021-11-25", excel_filename: str = "SIM-карты АСКУЭ Пирамида 211125.xlsm",
+                                 db_filename: str = "simdatabase.db",
+                                 db_table:str = "mts_current",
+                                 log: bool = True,
+                                 columns_to_readwrite: list = ["", ]):
+    date = now
+    purpose = "CSD НА СЧЕТЧИКАХ"
+    type = "Модем"
+    cwd = os.getcwd()
+    #print(cwd)
+    os.chdir("C:/Users/shamin.a/PycharmProjects/simcard")
+    file = 'sim-piramida-asque-meter_15_06_2021.csv'
+    wb = load_workbook(excel_filename)
+    #print(wb.sheetnames)
+    sheet = wb['АСКУЭ. Пирамида']
+    #print(sheet.title)
+
+    col = 0
+    with open(file, "w", newline='', encoding='utf-8') as csv_file:
+        writer = csv.writer(csv_file, delimiter=';')
+        #writer.writerow(['Наименование устройства',
+        #                 'Идентификационный номер',
+        #                 'Тип устройства',
+        #                 'Номер телефона',
+        #                 'Адрес, где находится устройство'])
+        for i in range(2, 10000):
+            num = sheet.cell(row=i, column=5).value
+            if num:
+                taddr = sheet.cell(row=i, column=2).value
+                if taddr: addr = taddr
+                t_auxiliary = sheet.cell(row=i, column=3).value
+                if t_auxiliary: auxiliary = t_auxiliary
+                snum = sheet.cell(row=i, column=4).value
+                num = str(num)[1:]
+                col += 1
+                row = [auxiliary, snum, 'Модем', num, addr]
+                #writer.writerow(row)
+                conn = sqlite3.connect(db_filename)
+                cursor = conn.cursor()
+                sql = f"""INSERT INTO {db_table}(num_tel, purpose, set_addr, aux, type, s_num, date)
+                        VALUES (7{row[3]}, '{purpose}', '{addr}', '{auxiliary}', '{row[2]}', '{row[1]}', '{date}')"""
+                if log:
+                    #ic(sql)
+                    print(f"{col} {sql}")
+                    #ic(row)
+                    #ic(f"{col} {sql}")
+                else:
+                    cursor.execute(sql)
+                    conn.commit()
+    cursor.close()
+    conn.close()
+
 
 def mts_on_astra_to_csv_db(excel_filename: str = "", db_filename: str = "", db_table:str = "",
                                      columns_to_readwrite: list = ["", ]):
@@ -736,6 +790,12 @@ if __name__ == '__main__':
     if READFIRSTMTS211013:
         mts_site_to_db("charge_report_electric_energy_meters_13_10_2021.xlsx", "Charges",
                        "simdatabase.db", [6, ], '2021-10-13', log = True)
+    if READFIRSTMTS211027:
+        mts_site_to_db("charge_report_electric_energy_meters_27_10_2021.xlsx", "Charges",
+                       "simdatabase.db", [6, ], '2021-10-27', log = True)
 
-    mts_site_now_minus_previous_to_csv(now='2021-10-13', previous_date='2021-09-10',
-                                       db_filename = "simdatabase.db", start_count =10201)
+    #mts_site_now_minus_previous_to_csv(now='2021-10-27', previous_date='2021-10-13',
+    #                                   db_filename = "simdatabase.db", start_count =10401)
+
+    mts_on_piramida_server_to_db("2021-11-25", "SIM-карты АСКУЭ Пирамида 211125.xlsm", "simdatabase.db", "mts_current",
+                                 log=True)
